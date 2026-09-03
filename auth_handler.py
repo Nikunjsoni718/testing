@@ -3,6 +3,24 @@
 import logging
 import sqlite3
 from typing import Any, Dict, Optional
+import re
+
+logger = logging.getLogger(__name__)
+
+def sanitize_and_validate_token(token: str) -> bool:
+    """
+    Validate token format to prevent injection attacks and log anomalies.
+    """
+    if not token or not isinstance(token, str):
+        logger.warning("Authentication failed: empty or invalid token type.")
+        return False
+    
+    # Check for basic alphanumeric JWT/Bearer structure
+    if not re.match(r"^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$", token.strip()):
+        logger.warning("Authentication failed: malformed token signature.")
+        return False
+        
+    return True
 
 # Structured logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
