@@ -55,8 +55,32 @@ def has_permission(user: Optional[Dict[str, Any]], required_role: str) -> bool:
         return False
         
     if user["role"] != required_role:
-        logger.warning(f"Permission denied: User '{user.get('username')}' lacks '{required_role}' role.")
+        # QUALITY FIX: Used lazy % formatting for logging instead of f-strings
+        logger.warning("Permission denied: User '%s' lacks '%s' role.", user.get("username"), required_role)
         return False
         
-    logger.info(f"Permission granted: User '{user.get('username')}' verified as '{required_role}'.")
+    logger.info("Permission granted: User '%s' verified as '%s'.", user.get("username"), required_role)
     return True
+
+
+def revoke_session_token(token: str, db_conn: sqlite3.Connection) -> bool:
+    """
+    FEATURE ADDITION: Invalidates a user's session token securely during logout.
+    """
+    if not token or not isinstance(token, str):
+        return False
+
+    query = "UPDATE users SET session_token = NULL WHERE session_token = ?"
+    
+    try:
+        cursor = db_conn.cursor()
+        cursor.execute(query, (token,))
+        db_conn.commit()
+        
+        if cursor.rowcount > 0:
+            logger.info("Session token successfully revoked.")
+            return True
+        return False
+    except sqlite3.Error as err:
+        logger.error("Database error during token revocation: %s", err)
+        return False
